@@ -6,7 +6,7 @@
 flowchart TB
     subgraph External["External"]
         Oscar["Oscar Health site<br/>/clinical-guidelines/medical"]
-        Anthropic["Anthropic API<br/>Claude Sonnet 4.6"]
+        LLMAPI["LLM Provider<br/>Anthropic OR OpenAI<br/>(selected via env)"]
     end
 
     subgraph UI["Frontend (React + Vite + Tailwind)"]
@@ -25,7 +25,7 @@ flowchart TB
         Resolve["resolve_pdf_urls()<br/>visit each policy page"]
         Download["download_pdfs()<br/>retry + rate limit + SHA256"]
         Extract["extract_initial_section()<br/>PyMuPDF + regex"]
-        LLM["structure_with_claude()<br/>2-pass extract + validate"]
+        LLM["structure_with_llm()<br/>2-pass extract + validate"]
         Validate["Pydantic<br/>CriteriaTree schema"]
     end
 
@@ -56,7 +56,7 @@ flowchart TB
     Structure --> Extract
     Extract --> Disk
     Extract --> LLM
-    LLM -->|Pass 1 + Pass 2| Anthropic
+    LLM -->|Pass 1 + Pass 2| LLMAPI
     LLM --> Validate
     Validate --> Postgres
 
@@ -69,7 +69,7 @@ flowchart TB
     classDef pipeline fill:#dcfce7,stroke:#16a34a,color:#000
     classDef storage fill:#fce7f3,stroke:#db2777,color:#000
 
-    class Oscar,Anthropic external
+    class Oscar,LLMAPI external
     class PoliciesTable,PolicyView ui
     class Scrape,Structure,ListAPI api
     class Discover,Resolve,Download,Extract,LLM,Validate pipeline
@@ -85,7 +85,7 @@ sequenceDiagram
     participant API as FastAPI
     participant BG as Background Task
     participant PDF as PyMuPDF
-    participant LLM as Claude Sonnet 4.6
+    participant LLM as LLM Provider<br/>(Anthropic OR OpenAI)
     participant DB as PostgreSQL
 
     User->>UI: click "Extract Selected"
@@ -151,20 +151,65 @@ flowchart TD
 
 ## Error handling cascade
 
+Single provider (Anthropic or OpenAI, selected at startup). Errors are classified into two types; retry policy depends on the type.
+
 ```mermaid
-flowchart LR
-    Call["LLM call"] --> Primary["Anthropic SDK"]
-    Primary -->|success| Done["Return JSON"]
-    Primary -->|401/403 auth error| Switch["Flip BACKEND=opencode<br/>rest of run"]
-    Primary -->|RateLimit / 429/503/529| Fallback1["Per-call fallback<br/>to OpenCode"]
-    Primary -->|Connection / Timeout| Retry["3x exp backoff<br/>1s, 2s, 4s"]
-    Primary -->|Other APIStatusError| Raise["Raise to outer handler"]
+flowchart TD
+    Call["call_llm(system, user)"] --> Provider["PROVIDER = 'anthropic' or 'openai'<br/>(chosen at startup from env)"]
 
-    Retry -->|still failing| Raise
-    Switch --> OpenCode["OpenCode CLI"]
-    Fallback1 --> OpenCode
+    Provider --> Invoke["Invoke provider SDK"]
 
-    Raise --> Log["Log to llm_metadata.errors[]<br/>and validation_error column"]
-    OpenCode -->|success| Done
-    OpenCode -->|empty stdout or exit != 0| Log
+    Invoke --> Success{"Response OK?"}
+    Success -->|Yes| Parse["parse_json_response()"]
+
+    Parse --> ValidJSON{"Valid JSON?"}
+    ValidJSON -->|Yes| Done["Return JSON"]
+    ValidJSON -->|No| JSONRetry["Re-prompt with error feedback<br/>(1 retry)"]
+    JSONRetry --> Invoke
+
+    Success -->|No| Classify{"Error type?"}
+
+    Classify -->|ConnectionError / Timeout<br/>RateLimit / 429 / 503 / 529| Transient["TransientLLMError"]
+    Classify -->|AuthError / 401 / 403<br/>BadRequest / 400| Permanent["PermanentLLMError"]
+
+    Transient --> Backoff["Retry with exponential backoff<br/>1s, 2s, 4s (max 3 attempts)"]
+    Backoff --> Invoke
+    Backoff -->|Exhausted| LogTransient["Log: pass_transient_exhausted<br/>abort this policy"]
+
+    Permanent --> LogPermanent["Log: pass_permanent<br/>abort this policy"]
+
+    LogTransient --> Store["DB: structured_policies<br/>validation_error + llm_metadata.errors[]"]
+    LogPermanent --> Store
+
+    classDef error fill:#fee2e2,stroke:#dc2626,color:#000
+    classDef action fill:#dcfce7,stroke:#16a34a,color:#000
+    classDef decision fill:#fef3c7,stroke:#d97706,color:#000
+    classDef terminal fill:#dbeafe,stroke:#2563eb,color:#000
+
+    class Transient,Permanent,LogTransient,LogPermanent error
+    class Invoke,Parse,JSONRetry,Backoff action
+    class Success,ValidJSON,Classify decision
+    class Done,Store terminal
 ```
+
+### Classification rules
+
+| Provider error | Type | Retry? |
+|----------------|------|--------|
+| `APIConnectionError` | Transient | ✓ exp backoff (1s, 2s, 4s) |
+| `APITimeoutError` | Transient | ✓ |
+| `RateLimitError` | Transient | ✓ |
+| Status 429, 503, 529 | Transient | ✓ |
+| `AuthenticationError` / 401, 403 | Permanent | ✗ abort |
+| Status 400 / bad request | Permanent | ✗ abort |
+| Any other exception | Raised to caller | — |
+
+### JSON-level retry
+
+Separate from error retries. If the LLM returns malformed JSON:
+- **Retry once** with the parse error appended to the prompt
+- If second attempt also fails, log `passN_invalid_json` and abort the policy
+
+### Pass 2 downgrade
+
+If Pass 2 (validation pass) hits any terminal error, falls back to Pass 1's result rather than losing the extraction. Logged as `pass2_..._using_pass1` in metadata.
