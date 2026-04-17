@@ -171,6 +171,43 @@ See [`SYSTEM_DESIGN.md`](./SYSTEM_DESIGN.md) for full Mermaid diagrams:
 | Scraping | httpx + BeautifulSoup | Minimal dependencies for Oscar's Next.js pages |
 | Validation | Pydantic (recursive) | Catches malformed LLM output with clear errors |
 
+### Database Schema
+
+The PostgreSQL database consists of four central tables designed to track the full lifecycle of a policy from discovery to structuring:
+
+- **`policies`** (Tracks discovered guideline PDFs)
+  - `id` (SERIAL PRIMARY KEY)
+  - `title` (VARCHAR): Extracted from the link text on the source page.
+  - `pdf_url` (VARCHAR UNIQUE): Ensures idempotency across repeated scrapes.
+  - `source_page_url` (VARCHAR): The page the PDF was found on.
+  - `discovered_at` (TIMESTAMP)
+
+- **`downloads`** (Tracks the physical PDF download status and location)
+  - `id` (SERIAL PRIMARY KEY)
+  - `policy_id` (INTEGER REFERENCES policies)
+  - `stored_location` (VARCHAR): Local path where the PDF is stored.
+  - `downloaded_at` (TIMESTAMP)
+  - `http_status` (INTEGER): Response code of the download request.
+  - `error` (TEXT): For logging failures (e.g., timeout).
+  - `content_hash` (VARCHAR): SHA-256 hash for deduplication/change tracking.
+
+- **`structured_policies`** (Stores the results of the LLM extraction)
+  - `id` (SERIAL PRIMARY KEY)
+  - `policy_id` (INTEGER REFERENCES policies)
+  - `extracted_text` (TEXT): The raw bounds-trimmed text (or full text) fed to Pass 1.
+  - `structured_json` (JSONB): The validated JSON tree output.
+  - `structured_at` (TIMESTAMP)
+  - `llm_metadata` (JSONB): Tracks model selection, tokens, and retry/failover attempts.
+  - `validation_error` (TEXT): Populated if Pydantic schema validation fails.
+  - `extraction_method` (VARCHAR): Either `regex_regex_bounds` or `full_text_fallback...`.
+
+- **`discovery_runs`** (Tracks completeness monitoring for pipeline health)
+  - `id` (SERIAL PRIMARY KEY)
+  - `run_at` (TIMESTAMP)
+  - `policies_found` (INTEGER): How many items the scraper found.
+  - `source_url` (VARCHAR)
+  - `source_html_snapshot` (TEXT): Stored payload to debug pattern drift if `policies_found` suddenly drops.
+
 ---
 
 ## Non-functional guarantees
