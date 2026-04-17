@@ -1,0 +1,145 @@
+{
+    "title": "Medical Necessity Criteria for Bariatric Surgery",
+    "insurance_name": "Oscar Health",
+    "rules": {
+        "rule_id": "1",
+        "rule_text": "Procedures are considered medically necessary when ALL of the following criteria are met",
+        "operator": "AND",
+        "rules": [
+            {
+                "rule_id": "1.1",
+                "rule_text": "Informed consent with appropriate explanation of risks, benefits, and alternatives"
+            },
+            {
+                "rule_id": "1.2",
+                "rule_text": "Adult aged 18 years or older with documentation of",
+                "operator": "OR",
+                "rules": [
+                    {
+                        "rule_id": "1.2.1",
+                        "rule_text": "Body mass index (BMI) ≥40"
+                    },
+                    {
+                        "rule_id": "1.2.2",
+                        "rule_text": "BMI greater ≥35 with ONE of the following severe obesity-related comorbidities",
+                        "operator": "OR",
+                        "rules": [
+                            {
+                                "rule_id": "1.2.2.1",
+                                "rule_text": "Clinically significant cardio-pulmonary disease (e.g. severe obstructive sleep apnea (OSA), obesity-hypoventilation syndrome (OHS))"
+                            },
+                            {
+                                "rule_id": "1.2.2.2",
+                                "rule_text": "Coronary artery disease, objectively documented via stress test, echocardiography, angiography, prior myocardial infarction, or similar"
+                            },
+                            {
+                                "rule_id": "1.2.2.3",
+                                "rule_text": "Objectively documented cardiomyopathy"
+                            },
+                            {
+                                "rule_id": "1.2.2.4",
+                                "rule_text": "Medically refractory hypertension (defined as > 140 mmHg systolic and/or 90 mmHg diastolic despite concurrent use of 3 antihypertensive agents)"
+                            },
+                            {
+                                "rule_id": "1.2.2.5",
+                                "rule_text": "Type 2 diabetes mellitus"
+                            },
+                            {
+                                "rule_id": "1.2.2.6",
+                                "rule_text": "Nonalcoholic fatty liver disease or nonalcoholic steatohepatitis"
+                            },
+                            {
+                                "rule_id": "1.2.2.7",
+                                "rule_text": "Osteoarthritis of the knee or hip or improving outcomes of knees or hip replacement"
+                            },
+                            {
+                                "rule_id": "1.2.2.8",
+                                "rule_text": "Urinary stress incontinence"
+                            }
+                        ]
+                    },
+                    {
+                        "rule_id": "1.2.3",
+                        "rule_text": "BMI ≥30-34.9, see section below"
+                    }
+                ]
+            },
+            {
+                "rule_id": "1.3",
+                "rule_text": "Failure to achieve and maintain successful long-term weight loss via non-surgical therapy"
+            },
+            {
+                "rule_id": "1.4",
+                "rule_text": "The proposed bariatric surgery includes a comprehensive pre- and post-operative plan",
+                "operator": "AND",
+                "rules": [
+                    {
+                        "rule_id": "1.4.1",
+                        "rule_text": "Preoperative evaluation to rule out and treat any other reversible causes of weight gain/obesity",
+                        "operator": "AND",
+                        "rules": [
+                            {
+                                "rule_id": "1.4.1.1",
+                                "rule_text": "Basic laboratory testing (blood glucose, lipid panel, CBC, metabolic panel, blood typing, coagulation studies)"
+                            },
+                            {
+                                "rule_id": "1.4.1.2",
+                                "rule_text": "Nutrient deficiency screening and formal nutrition evaluation"
+                            },
+                            {
+                                "rule_id": "1.4.1.3",
+                                "rule_text": "Cardiopulmonary risk evaluation"
+                            },
+                            {
+                                "rule_id": "1.4.1.4",
+                                "rule_text": "GI evaluation"
+                            },
+                            {
+                                "rule_id": "1.4.1.5",
+                                "rule_text": "Endocrine evaluation"
+                            },
+                            {
+                                "rule_id": "1.4.1.6",
+                                "rule_text": "Age appropriate cancer screening verified complete and up to date"
+                            },
+                            {
+                                "rule_id": "1.4.1.7",
+                                "rule_text": "Smoking cessation counseling, if applicable"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "rule_id": "1.5",
+                "rule_text": "Psycho-social behavioral evaluation",
+                "operator": "AND",
+                "rules": [
+                    {
+                        "rule_id": "1.5.1",
+                        "rule_text": "No current substance abuse has been identified"
+                    },
+                    {
+                        "rule_id": "1.5.2",
+                        "rule_text": "Members who have any of the following conditions MUST have formal, documented preoperative psychological clearance",
+                        "operator": "OR",
+                        "rules": [
+                            {
+                                "rule_id": "1.5.2.1",
+                                "rule_text": "A history of schizophrenia, borderline personality disorder, suicidal ideation, severe depression"
+                            },
+                            {
+                                "rule_id": "1.5.2.2",
+                                "rule_text": "Who are currently under the care of a psychologist/psychiatrist"
+                            },
+                            {
+                                "rule_id": "1.5.2.3",
+                                "rule_text": "Who are on psychotropic medications"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
