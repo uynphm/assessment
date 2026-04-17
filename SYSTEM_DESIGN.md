@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart TB
-    subgraph External["External"]
+    subgraph Third-party["Third-party"]
         Oscar["Oscar Health site<br/>/clinical-guidelines/medical"]
         LLMAPI["LLM Provider<br/>Anthropic OR OpenAI<br/>(selected via env)"]
     end

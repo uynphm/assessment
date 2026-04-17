@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+httpx
+beautifulsoup4
+pymupdf
+anthropic
+openai
+pydantic
+psycopg2-binary
+python-dotenv
